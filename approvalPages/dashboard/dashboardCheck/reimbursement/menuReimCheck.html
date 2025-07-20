@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu - Kansai Paint</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/36105d0c62.js" crossorigin="anonymous"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Library untuk Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Library untuk PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <!-- Add the shared menu CSS for better styling -->
+    <link rel="stylesheet" href="../shared-menu.css">
+    <link rel="stylesheet" href="menuReimCheck.css">
+    <style>
+        /* Scrollable cell styling for long text */
+        .scrollable-cell {
+            max-width: 150px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 5px;
+            scrollbar-width: thin;
+        }
+        
+        .scrollable-cell::-webkit-scrollbar {
+            height: 4px; /* Reduced height from 6px to 4px */
+        }
+        
+        .scrollable-cell::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .scrollable-cell::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .scrollable-cell::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+
+</head>
+<body>
+    <div class="flex min-h-screen bg-gradient">
+        <button onclick="toggleSidebar()" class="fixed top-4 left-4 z-50 md:hidden p-2">
+            <i class="fas fa-bars text-white text-2xl"></i>
+          </button>
+
+
+        <aside id="sidebar" class="bg-white shadow-lg">
+            <!-- Sidebar content will be loaded by sidebar-loader.js -->
+        </aside>
+
+        <!-- User Avatar -->
+        <div class="absolute top-4 right-4 flex items-center space-x-4">
+            <!-- Notification Icon -->
+            <div id="notificationBellWrapper" class="relative">
+                <button id="notificationBell" class="focus:outline-none">
+                    <i class="fas fa-bell text-white text-2xl"></i>
+                    <span id="notificationBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5">0</span>
+                </button>
+            </div>
+            <!-- User Avatar + Name -->
+            <div class="user-profile flex items-center space-x-3 px-3 py-1.5 rounded-full" style="display: none;">
+                <img id="dashboardUserIcon" src="" alt="User Avatar"
+                     class="user-avatar w-9 h-9 rounded-full cursor-pointer"
+                     onclick="goToProfile()">
+                <div>
+                    <span id="userNameDisplay" class="font-semibold text-white block leading-tight"></span>
+                    <span class="text-white text-opacity-70 text-xs">Online</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 p-8 pb-20 md:pb-6">
+            <h2 class="text-3xl font-bold text-white mb-4 text-center md:text-left">
+                Dashboard Reimbursement Check
+            </h2>
+            
+            <!-- Status Cards - Improved responsive grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 bg-white bg-opacity-10 p-6 rounded-xl backdrop-filter backdrop-blur-sm border border-white border-opacity-20">
+                <div class="p-6 bg-white rounded-lg shadow-lg text-center card-hover stat-card min-w-[170px]">
+                    <h3 class="text-lg font-semibold">Total Documents</h3>
+                    <p id="totalCount" class="text-2xl font-bold text-blue-600">0</p>
+                </div>
+                <div class="p-6 bg-white rounded-lg shadow-lg text-center card-hover stat-card min-w-[170px]">
+                    <h3 class="text-lg font-semibold">Prepared</h3>
+                    <p id="preparedCount" class="text-2xl font-bold text-yellow-600">0</p>
+                </div>
+                <div class="p-6 bg-white rounded-lg shadow-lg text-center card-hover stat-card min-w-[170px]">
+                    <h3 class="text-lg font-semibold">Checked</h3>
+                    <p id="checkedCount" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div class="p-6 bg-white rounded-lg shadow-lg text-center card-hover stat-card min-w-[170px]">
+                    <h3 class="text-lg font-semibold">Rejected</h3>
+                    <p id="rejectedCount" class="text-2xl font-bold text-red-600">0</p>
+                </div>
+            </div>
+
+            <!-- Documents List - Improved container styling -->
+            <div class="bg-white bg-opacity-10 p-6 rounded-xl backdrop-filter backdrop-blur-sm border border-white border-opacity-20">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4">List Documents</h3>
+                    
+                    <!-- Tab buttons and Search Bar -->
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-0">
+                        <!-- Tab buttons for switching views -->
+                        <div class="flex mb-4 mt-2 md:mt-0 border-b w-full md:w-auto">
+                            <button id="preparedTabBtn" onclick="switchTab('prepared')" class="px-4 py-2 tab-active rounded-t-lg">
+                                <i class="fas fa-file-alt mr-2"></i>Prepared
+                            </button>
+                            <button id="checkedTabBtn" onclick="switchTab('checked')" class="px-4 py-2 rounded-t-lg">
+                                <i class="fas fa-check mr-2"></i>Checked
+                            </button>
+                            <button id="rejectedTabBtn" onclick="switchTab('rejected')" class="px-4 py-2 rounded-t-lg">
+                                <i class="fas fa-times-circle mr-2"></i>Rejected
+                            </button>
+                        </div>
+
+                        <!-- Search Bar -->
+                        <div class="relative">
+                            <div class="flex">
+                                <select id="searchType" class="border-r-0 rounded-r-none rounded-l-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 px-2">
+                                    <option value="pr">Reimbursement Number</option>
+                                    <option value="requester">Requester</option>
+                                    <option value="date">Submission Date</option>
+                                    <option value="status">Status</option>
+                                </select>
+                                <input
+                                    type="text"
+                                    id="searchInput"
+                                    placeholder="Search..."
+                                    class="w-full md:w-48 px-4 py-2 border rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                      <table class="table-auto w-full min-w-max whitespace-nowrap text-xs md:text-sm border">
+                        <thead class="bg-gray-200">
+                          <tr>
+                            <th class="p-2 text-left">No.</th>
+                            <th class="p-2 text-left">Reimbursement Number</th>
+                            <th class="p-2 text-left">Requester</th>
+                            <th class="p-2 text-left">Department</th>
+                            <th class="p-2 text-left">Submission Date</th>
+                            <th class="p-2 text-left">Status</th>
+                            <th class="p-2 text-left">Tools</th>
+                          </tr>
+                        </thead>
+                        <tbody id="recentDocs"></tbody>
+                      </table>
+                    </div>
+                    
+                    <!-- Pagination controls -->
+                    <div class="flex justify-between items-center mt-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="startItem">1</span>-<span id="endItem">10</span> of <span id="totalItems">0</span> items
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="prevPage" onclick="changePage(-1)" class="pagination-btn disabled">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span id="currentPage" class="px-3 py-1">1</span>
+                            <button id="nextPage" onclick="changePage(1)" class="pagination-btn">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between mt-4">
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="downloadExcel()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 shadow-md transform hover:scale-105 transition-transform duration-300">
+                            <i class="fas fa-file-excel mr-2"></i>Excel
+                        </button>
+                        <button onclick="downloadPDF()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 shadow-md transform hover:scale-105 transition-transform duration-300">
+                            <i class="fas fa-file-pdf mr-2"></i>PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation Bar - More comprehensive options -->
+    <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 px-4 py-2 md:hidden flex justify-around items-center shadow-md rounded-t-xl">
+        <button onclick="goToTotalDocs()" class="flex flex-col items-center space-y-1 text-xs font-medium text-gray-600 hover:text-blue-500 transition-colors duration-200 focus:outline-none">
+          <i class="fas fa-file-alt text-xl"></i>
+          <span>Total</span>
+        </button>
+        <button onclick="switchTab('prepared')" class="flex flex-col items-center space-y-1 text-xs font-medium text-gray-600 hover:text-blue-500 transition-colors duration-200 focus:outline-none">
+          <i class="fas fa-file text-xl"></i>
+          <span>Prepared</span>
+        </button>
+        <button onclick="switchTab('checked')" class="flex flex-col items-center space-y-1 text-xs font-medium text-gray-600 hover:text-blue-500 transition-colors duration-200 focus:outline-none">
+          <i class="fas fa-check text-xl"></i>
+          <span>Checked</span>
+        </button>
+        <button onclick="switchTab('rejected')" class="flex flex-col items-center space-y-1 text-xs font-medium text-gray-600 hover:text-blue-500 transition-colors duration-200 focus:outline-none">
+          <i class="fas fa-times-circle text-xl"></i>
+          <span>Rejected</span>
+        </button>
+    </nav>
+
+    <!-- External JS -->
+    <script src="../../../../js/auth.js"></script>
+    <!-- Shared Components -->
+    <script src="../../../../components/shared/sidebar-loader.js"></script>
+    <script src="../../../../components/shared/navigation.js"></script>
+    <script src="menuReimCheck.js"></script>
+    
+    <!-- Add script for scrollable cells -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add scrollable-cell class to cells with long content
+            function addScrollToLongCells() {
+                const table = document.querySelector('table');
+                if (!table) return;
+                
+                // Observer for table changes
+                const observer = new MutationObserver(function(mutations) {
+                    const rows = document.querySelectorAll('#recentDocs tr');
+                    
+                    rows.forEach(row => {
+                        // Get cells for Doc Number (index 0), Reimbursement Number (index 1),
+                        // Requester (index 2), and Department (index 3)
+                        const docNumberCell = row.cells[0];
+                        const reimNumberCell = row.cells[1];
+                        const requesterCell = row.cells[2];
+                        const departmentCell = row.cells[3];
+                        
+                        if (docNumberCell && docNumberCell.textContent.trim().length > 15) {
+                            docNumberCell.classList.add('scrollable-cell');
+                        }
+                        
+                        if (reimNumberCell && reimNumberCell.textContent.trim().length > 15) {
+                            reimNumberCell.classList.add('scrollable-cell');
+                        }
+                        
+                        if (requesterCell && requesterCell.textContent.trim().length > 15) {
+                            requesterCell.classList.add('scrollable-cell');
+                        }
+                        
+                        if (departmentCell && departmentCell.textContent.trim().length > 15) {
+                            departmentCell.classList.add('scrollable-cell');
+                        }
+                    });
+                });
+                
+                // Configure observer
+                const config = { childList: true, subtree: true };
+                
+                // Start observing the table
+                observer.observe(document.getElementById('recentDocs'), config);
+            }
+            
+            // Call function after page loads
+            addScrollToLongCells();
+        });
+        
+        // Track user interaction for audio playback
+        document.addEventListener('click', function() {
+            document.hasInteracted = true;
+        });
+        
+        document.addEventListener('keydown', function() {
+            document.hasInteracted = true;
+        });
+    </script>
+</body>
+</html>

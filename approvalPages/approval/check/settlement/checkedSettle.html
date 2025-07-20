@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="../../../../js/auth.js"></script>
+    <script src="checkedSettle.js"></script>
+    
+    <style>
+        /* Dropdown styling */
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .dropdown-item:hover {
+            background-color: #f3f4f6;
+        }
+        .search-dropdown {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 50;
+        }
+        .search-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-red-500">
+    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-6xl">
+        <button onclick="goToMenuCheckSettle()" type="button" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Back</button>
+        <h2 class="text-2xl font-bold text-center text-blue-900 mb-4">Settlement</h2>
+        <br>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Settlement No.</h3>
+                <input type="text" id="invno" placeholder="Settlement No." class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Settlement Ref. No.</h3>
+                <input type="text" id="settlementRefNo" placeholder="Settlement Ref. No." class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Employee NIK</h3>
+                <input type="text" id="Employee" placeholder="Employee NIK" class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Employee Name</h3>
+                <input type="text" id="EmployeeName" placeholder="Employee Name" class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Requester Name</h3>
+                <input type="text" id="requester" placeholder="Requester Name" class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Purpose</h3>
+                <input type="text" id="purpose" placeholder="Purpose" class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Paid to</h3>
+                <input type="text" id="paidTo" placeholder="Paid to" class="w-full p-2 border rounded" readonly>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Department</h3>
+                <select id="department" class="w-full p-2 border rounded" disabled>
+                    <option value="Production">Production</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Technical">Technical</option>
+                    <option value="Administration">Administration</option>
+                    <option value="QA/QC">QA/QC</option>
+                </select>
+                <h3 class="text-lg font-semibold mb-2">Submission Date</h3>
+                <input type="date" id="SubmissionDate" class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Cash Advance Number</h3>
+                <input type="text" id="cashAdvanceNumber" placeholder="Cash Advance Number" class="w-full p-2 border rounded" readonly>
+                <h3 class="text-lg font-semibold mb-2">Status</h3>
+                <select id="docStatus" class="w-full p-2 border rounded" disabled>
+                    <option value="Prepared">Prepared</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Checked">Checked</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+                <h3 class="text-lg font-semibold mb-2">Attach Doc</h3>
+                <input type="file" id="attachments" accept="application/pdf" class="w-full p-2 border rounded bg-gray-100" multiple disabled />
+                
+                <!-- Attachments Display Section -->
+                <div class="mt-2" id="attachmentsSection">
+                    <div id="attachmentsList" class="border rounded p-2 bg-gray-50 min-h-16">
+                        <!-- Attachments will be displayed here -->
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-semibold mb-2">Type of Transaction</h3>
+                <select id="TransactionType" class="w-full p-2 border rounded" disabled>
+                    <option value="Medical">Medical</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Others">Others</option>
+                </select>
+            </div>
+        </div>
+        
+        <table id="settleTable" class="w-full text-left border mt-2">
+            <thead class="bg-purple-100">
+                <br>
+                <tr>
+                    <th class="p-2">Category</th>
+                    <th class="p-2">Account Name</th>
+                    <th class="p-2">G/L Account</th>
+                    <th class="p-2">Description</th>
+                    <th class="p-2">Amount</th>
+                    <th class="p-2">Action</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Rows will be populated by JavaScript -->
+            </tbody>
+        </table>
+        
+        <div class="mt-4">
+            <label>Remarks</label>
+            <textarea id="remarks" class="w-full p-2 border rounded-md" placeholder="Add remarks for approval/rejection"></textarea>
+        </div>
+        
+        <!-- Revision Remarks Section -->
+        <div class="mt-4">
+            <div class="flex justify-between items-center">
+                <!--<label class="text-red-600">Need Revision</label>-->
+                <button onclick="toggleRevisionField()" id="addRevisionBtn" class="text-blue-500 hover:text-blue-700 font-medium">+ Add revision</button>
+            </div>
+            <div id="revisionContainer" class="hidden">
+                <!-- Revision fields will be added here by JavaScript -->
+            </div>
+        </div>
+        <br>
+
+        <!-- Approval -->
+        <div class="grid grid-cols-2 gap-4 text-sm mt-4">
+            <div> 
+                <label id="preparedByCheck" class="mr-1"><strong>Prepared by :</strong></label>
+                <div class="relative">
+                    <input type="text" id="preparedBySearch" placeholder="Search User" class="w-full p-1 border rounded search-input" onkeyup="filterUsers('preparedBy')" autocomplete="off" readonly>
+                    <select id="prepared" class="hidden">
+                        <option value="">Select User</option>
+                    </select>
+                    <div id="preparedByDropdown" class="absolute z-10 hidden w-full mt-1 bg-white border rounded search-dropdown"></div>
+                </div>
+            </div>
+            <div>
+                <label id="checkedByCheck" class="mr-1"><strong>Checked by :</strong></label>
+                <div class="relative">
+                    <input type="text" id="checkedBySearch" placeholder="Search User" class="w-full p-1 border rounded search-input" onkeyup="filterUsers('checkedBy')" autocomplete="off" readonly>
+                    <select id="Checked" class="hidden">
+                        <option value="">Select User</option>
+                    </select>
+                    <div id="checkedByDropdown" class="absolute z-10 hidden w-full mt-1 bg-white border rounded search-dropdown"></div>
+                </div>
+            </div>
+                        <div>
+                <label id="acknowledgedByCheck" class="mr-1"><strong>Acknowledged by :</strong></label>
+                <div class="relative">
+                    <input type="text" id="acknowledgedBySearch" placeholder="Search User" class="w-full p-1 border rounded search-input" onkeyup="filterUsers('acknowledgedBy')" autocomplete="off" readonly>
+                    <select id="Acknowledged" class="hidden">
+                        <option value="">Select User</option>
+                    </select>
+                    <div id="acknowledgedByDropdown" class="absolute z-10 hidden w-full mt-1 bg-white border rounded search-dropdown"></div>
+                </div>
+            </div>
+            <div>
+                <label id="approvedByCheck" class="mr-1"><strong>Approved by :</strong></label>
+                <div class="relative">
+                    <input type="text" id="approvedBySearch" placeholder="Search User" class="w-full p-1 border rounded search-input" onkeyup="filterUsers('approvedBy')" autocomplete="off" readonly>
+                    <select id="Approved" class="hidden">
+                        <option value="">Select User</option>
+                    </select>
+                    <div id="approvedByDropdown" class="absolute z-10 hidden w-full mt-1 bg-white border rounded search-dropdown"></div>
+                </div>
+            </div>
+            <div>
+                <label id="receivedByCheck" class="mr-1"><strong>Received by :</strong></label>
+                <div class="relative">
+                    <input type="text" id="receivedBySearch" placeholder="Search User" class="w-full p-1 border rounded search-input" onkeyup="filterUsers('receivedBy')" autocomplete="off" readonly>
+                    <select id="Received" class="hidden">
+                        <option value="">Select User</option>
+                    </select>
+                    <div id="receivedByDropdown" class="absolute z-10 hidden w-full mt-1 bg-white border rounded search-dropdown"></div>
+                </div>
+            </div>
+
+        </div>
+        <br>
+        <div class="flex justify-between space-x-4 mt-6">
+            <div class="flex space-x-4">
+                <button onclick="onReject()" class="bg-red-400 hover:bg-red-500 text-white font-semibold py-2 px-2 rounded-lg shadow transition transform hover:scale-105 duration-200 w-32">
+            Reject
+            </button>
+                <button onclick="onChecked()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-2 rounded-lg shadow transition transform hover:scale-105 duration-200 w-32">
+            Checked
+            </button>
+            </div>
+            <button onclick="revisionReim()" id="revisionButton" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-2 rounded-lg shadow transition transform hover:scale-105 duration-200 w-32 opacity-50 cursor-not-allowed">
+            Revision
+            </button>
+        </div>
+        </div>
+
+    <script>
+        // Global variables to track revision fields
+        let revisionFieldsByUser = new Map(); // Track which users have added fields
+        const MAX_REVISION_FIELDS = 4;
+
+        // Toggle revision container visibility and add first field
+        function toggleRevisionField() {
+            const container = document.getElementById('revisionContainer');
+            const addBtn = document.getElementById('addRevisionBtn');
+            const currentUser = getUserInfo();
+            const currentFieldCount = container.querySelectorAll('textarea').length;
+            
+            // Check if user can add a field
+            if (currentFieldCount >= MAX_REVISION_FIELDS) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Maximum Limit',
+                    text: `Maximum ${MAX_REVISION_FIELDS} revision field allowed`
+                });
+                return;
+            }
+            
+            if (revisionFieldsByUser.has(currentUser.name)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'all ready exist',
+                    text: 'You already added a revision field. Each user can only add one field.'
+                });
+                return;
+            }
+            
+            if (container.classList.contains('hidden')) {
+                // Show container and add first field
+                container.classList.remove('hidden');
+                addRevisionField();
+            } else {
+                // Add another field
+                addRevisionField();
+            }
+        }
+
+        // Add revision field functionality
+        function addRevisionField() {
+            const container = document.getElementById('revisionContainer');
+            const currentUser = getUserInfo();
+            const currentFieldCount = container.querySelectorAll('textarea').length;
+            
+            // Check if maximum fields reached
+            if (currentFieldCount >= MAX_REVISION_FIELDS) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Maximum Limit',
+                    text: `Maximum ${MAX_REVISION_FIELDS} revision field allowed`
+                });
+                return;
+            }
+            
+            // Check if current user already has a field
+            if (revisionFieldsByUser.has(currentUser.name)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'All ready exist',
+                    text: 'You already added a revision field. Each user can only add one field.'
+                });
+                return;
+            }
+            
+            // Create wrapper div for the textarea and delete button
+            const fieldWrapper = document.createElement('div');
+            fieldWrapper.className = 'flex items-center space-x-2 mt-2';
+            fieldWrapper.dataset.userName = currentUser.name; // Store user name in wrapper
+            
+            // Create textarea
+            const newField = document.createElement('textarea');
+            newField.className = 'w-full p-2 border rounded-md';
+            newField.placeholder = 'Enter additional revision details';
+            
+            // Add event listener for input to handle protected prefix
+            newField.addEventListener('input', handleRevisionInput);
+            
+            // Initialize with user prefix
+            initializeWithUserPrefix(newField);
+            
+            // Create delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.innerHTML = '&times;'; // × symbol
+            deleteButton.className = 'bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 focus:outline-none';
+            deleteButton.title = 'Hapus field revision ini';
+            deleteButton.onclick = function() {
+                // Remove user from tracking when field is deleted
+                const userName = fieldWrapper.dataset.userName;
+                revisionFieldsByUser.delete(userName);
+                
+                fieldWrapper.remove();
+                checkRevisionButton(); // Update button state after removing a field
+                checkRevisionContainer(); // Check if container should be hidden
+                updateAddButtonState(); // Update add button state
+            };
+            
+            // Add textarea and delete button to wrapper
+            fieldWrapper.appendChild(newField);
+            fieldWrapper.appendChild(deleteButton);
+            
+            // Add wrapper to container
+            container.appendChild(fieldWrapper);
+            
+            // Track that this user has added a field
+            revisionFieldsByUser.set(currentUser.name, true);
+            
+            // Update the revision button state and add button state
+            checkRevisionButton();
+            updateAddButtonState();
+        }
+        
+        // Check if revision container should be hidden when all fields are removed
+        function checkRevisionContainer() {
+            const container = document.getElementById('revisionContainer');
+            const addBtn = document.getElementById('addRevisionBtn');
+            const revisionFields = document.querySelectorAll('#revisionContainer textarea');
+            
+            if (revisionFields.length === 0) {
+                container.classList.add('hidden');
+                addBtn.textContent = '+ Add revision';
+                // Clear the tracking map when container is hidden
+                revisionFieldsByUser.clear();
+            }
+        }
+
+        // Update add button state based on current conditions
+        function updateAddButtonState() {
+            const addBtn = document.getElementById('addRevisionBtn');
+            const container = document.getElementById('revisionContainer');
+            const currentUser = getUserInfo();
+            const currentFieldCount = container.querySelectorAll('textarea').length;
+            
+            // Check if user can add more fields
+            const canAddMore = currentFieldCount < MAX_REVISION_FIELDS && !revisionFieldsByUser.has(currentUser.name);
+            
+            if (canAddMore) {
+                addBtn.style.opacity = '1';
+                addBtn.style.cursor = 'pointer';
+                addBtn.style.pointerEvents = 'auto';
+                if (currentFieldCount === 0) {
+                    addBtn.textContent = '+ Add revision';
+                } else {
+                    addBtn.textContent = '+ Add more revision';
+                }
+            } else {
+                addBtn.style.opacity = '0.5';
+                addBtn.style.cursor = 'not-allowed';
+                addBtn.style.pointerEvents = 'none';
+                
+                if (currentFieldCount >= MAX_REVISION_FIELDS) {
+                    addBtn.textContent = `Max ${MAX_REVISION_FIELDS} fields reached`;
+                } else if (revisionFieldsByUser.has(currentUser.name)) {
+                    addBtn.textContent = ' ';
+                }
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const revisionContainer = document.getElementById('revisionContainer');
+            
+            // Use event delegation to handle input events on all textareas
+            revisionContainer.addEventListener('input', function(event) {
+                if (event.target.tagName === 'TEXTAREA') {
+                    checkRevisionButton();
+                }
+            });
+            
+            // Initialize button states
+            checkRevisionButton();
+            updateAddButtonState();
+        });
+        
+        // Function to get current user information
+        function getUserInfo() {
+            // Use functions from auth.js to get user information
+            let userName = 'Unknown User';
+            let userRole = 'Checker'; // Default role for this page since we're on the checker page
+            
+            try {
+                // Get user info from getCurrentUser function in auth.js
+                const currentUser = getCurrentUser();
+                if (currentUser && currentUser.username) {
+                    userName = currentUser.username;
+                }
+                
+                // Get user role based on the current page
+                // Since we're on the checker page, the role is Checker
+            } catch (e) {
+                console.error('Error getting user info:', e);
+            }
+            
+            return { name: userName, role: userRole };
+        }
+        
+        // Function to initialize textarea with user prefix
+        function initializeWithUserPrefix(textarea) {
+            const userInfo = getUserInfo();
+            const prefix = `[${userInfo.name} - ${userInfo.role}]: `;
+            textarea.value = prefix;
+            
+            // Store the prefix length as a data attribute
+            textarea.dataset.prefixLength = prefix.length;
+            
+            // Set selection range after the prefix
+            textarea.setSelectionRange(prefix.length, prefix.length);
+            textarea.focus();
+        }
+        
+        // Function to handle input and protect the prefix
+        function handleRevisionInput(event) {
+            const textarea = event.target;
+            const prefixLength = parseInt(textarea.dataset.prefixLength || '0');
+            
+            // If user tries to modify content before the prefix length
+            if (textarea.selectionStart < prefixLength || textarea.selectionEnd < prefixLength) {
+                // Restore the prefix
+                const userInfo = getUserInfo();
+                const prefix = `[${userInfo.name} - ${userInfo.role}]: `;
+                
+                // Only restore if the prefix is damaged
+                if (!textarea.value.startsWith(prefix)) {
+                    const userText = textarea.value.substring(prefixLength);
+                    textarea.value = prefix + userText;
+                    
+                    // Reset cursor position after the prefix
+                    textarea.setSelectionRange(prefixLength, prefixLength);
+                } else {
+                    // Just move cursor after prefix
+                    textarea.setSelectionRange(prefixLength, prefixLength);
+                }
+            }
+        }
+        
+        // Check if revision remarks are filled to enable/disable revision button
+        function checkRevisionButton() {
+            const revisionButton = document.getElementById('revisionButton');
+            const revisionFields = document.querySelectorAll('#revisionContainer textarea');
+            
+            let hasContent = false;
+            
+            // Check if there are any revision fields and if they have content
+            if (revisionFields.length > 0) {
+                revisionFields.forEach(field => {
+                    const prefixLength = parseInt(field.dataset.prefixLength || '0');
+                    // Check if there's content beyond the prefix
+                    if (field.value.trim().length > prefixLength) {
+                        hasContent = true;
+                    }
+                });
+            }
+            
+            if (hasContent) {
+                revisionButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                revisionButton.disabled = false;
+            } else {
+                revisionButton.classList.add('opacity-50', 'cursor-not-allowed');
+                revisionButton.disabled = true;
+            }
+        }
+        
+        // Modify the revisionReim function to collect all revision remarks
+        function revisionReim() {
+            const revisionFields = document.querySelectorAll('#revisionContainer textarea');
+            
+            // Check if revision button is disabled
+            if (document.getElementById('revisionButton').disabled) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Silakan tambahkan dan isi field revision terlebih dahulu'
+                });
+                return;
+            }
+            
+            let allRemarks = '';
+            
+            revisionFields.forEach((field, index) => {
+                // Include the entire content including the prefix
+                if (field.value.trim() !== '') {
+                    if (allRemarks !== '') allRemarks += '\n\n';
+                    allRemarks += field.value.trim();
+                }
+            });
+            
+            if (revisionFields.length === 0 || allRemarks.trim() === '') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Silakan tambahkan dan isi field revision terlebih dahulu'
+                });
+                return;
+            }
+            
+            // Call the existing function with the collected remarks
+            updateSettleStatusWithRemarks('revise', allRemarks);
+        }
+    </script>
+</body>
+</html>
